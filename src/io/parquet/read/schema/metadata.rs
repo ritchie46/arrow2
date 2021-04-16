@@ -100,6 +100,9 @@ mod tests {
 
     #[test]
     fn test_basic() -> Result<()> {
+        if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
+            return Ok(());
+        }
         let schema = read_schema("fixtures/pyarrow3/v1/basic_nullable_10.parquet")?;
         let names = schema
             .unwrap()
