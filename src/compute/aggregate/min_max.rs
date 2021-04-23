@@ -1,5 +1,9 @@
-use crate::array::{ord::*, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array};
 use crate::types::NativeType;
+use crate::{
+    array::{ord::*, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array},
+    bitmap::Bitmap,
+    types::BitChunkIter,
+};
 
 /// Helper macro to perform min/max of strings
 fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
@@ -41,34 +45,34 @@ fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
 /// For floating point arrays any NaN values are considered to be greater than any other non-null value
 pub fn min_primitive<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
-    T: NativeType + Ord,
+    T: NativeType + num::Bounded + Ord,
 {
-    min_max_helper(array, total_cmp)
+    min_max_helper(array, total_cmp, true)
 }
 
 pub fn max_f32(array: &PrimitiveArray<f32>) -> Option<f32> {
-    min_max_helper(array, |x, y| total_cmp_f32(x, y).reverse())
+    min_max_helper(array, |x, y| total_cmp_f32(x, y).reverse(), false)
 }
 
 pub fn max_f64(array: &PrimitiveArray<f64>) -> Option<f64> {
-    min_max_helper(array, |x, y| total_cmp_f64(x, y).reverse())
+    min_max_helper(array, |x, y| total_cmp_f64(x, y).reverse(), false)
 }
 
 pub fn min_f32(array: &PrimitiveArray<f32>) -> Option<f32> {
-    min_max_helper(array, |x, y| total_cmp_f32(x, y))
+    min_max_helper(array, |x, y| total_cmp_f32(x, y), true)
 }
 
 pub fn min_f64(array: &PrimitiveArray<f64>) -> Option<f64> {
-    min_max_helper(array, |x, y| total_cmp_f64(x, y))
+    min_max_helper(array, |x, y| total_cmp_f64(x, y), true)
 }
 
 /// Returns the maximum value in the array, according to the natural order.
 /// For floating point arrays any NaN values are considered to be greater than any other non-null value
 pub fn max_primitive<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
-    T: NativeType + Ord,
+    T: NativeType + num::Bounded + Ord,
 {
-    min_max_helper(array, |x, y| total_cmp(x, y).reverse())
+    min_max_helper(array, |x, y| total_cmp(x, y).reverse(), false)
 }
 
 /// Returns the maximum value in the string array, according to the natural order.
@@ -129,11 +133,84 @@ where
     reduce_slice(reduced, remainder, cmp)
 }
 
+#[inline]
+fn reduce_nullable_slice<'a, T, I: Iterator<Item = &'a T>, II: Iterator<Item = bool>, F>(
+    initial: T,
+    values: I,
+    validity: II,
+    cmp: F,
+) -> T
+where
+    T: NativeType + num::Bounded,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    values.zip(validity).fold(initial, |max, (item, is_valid)| {
+        if is_valid && cmp(&max, item) == std::cmp::Ordering::Greater {
+            *item
+        } else {
+            max
+        }
+    })
+}
+
+fn null_min_max_primitive<T, F>(values: &[T], validity: &Bitmap, cmp: F, is_min: bool) -> T
+where
+    T: NativeType + num::Bounded,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    if values.len() < T::LANES {
+        let initial = if is_min {
+            T::max_value()
+        } else {
+            T::min_value()
+        };
+        return reduce_nullable_slice(initial, values.iter(), validity.iter(), cmp);
+    };
+    let chunks = values.chunks_exact(T::LANES);
+    let remainder = chunks.remainder();
+
+    let masks = validity.chunks::<T::SimdMask>();
+    let validity_remainder = masks.remainder_iter();
+
+    let mut initial = T::new_simd();
+    if is_min {
+        for i in 0..T::LANES {
+            initial[i] = T::max_value()
+        }
+    } else {
+        for i in 0..T::LANES {
+            initial[i] = T::min_value()
+        }
+    }
+
+    let chunk_reduced = chunks
+        .zip(masks)
+        .fold(initial, |mut reduced, (chunk, mask)| {
+            let chunk = T::from_slice(chunk);
+            let iter = BitChunkIter::new(mask, T::LANES);
+            for (i, is_valid) in (0..T::LANES).zip(iter) {
+                if is_valid && cmp(&reduced[i], &chunk[i]) == std::cmp::Ordering::Greater {
+                    reduced[i] = chunk[i];
+                }
+            }
+            reduced
+        });
+
+    let mut reduced = chunk_reduced[0];
+    for i in 1..T::LANES {
+        if cmp(&reduced, &chunk_reduced[i]) == std::cmp::Ordering::Greater {
+            reduced = chunk_reduced[i];
+        }
+    }
+
+    reduce_nullable_slice(reduced, remainder.iter(), validity_remainder, cmp)
+}
+
 /// Helper function to perform min/max lambda function on values from a numeric array.
 #[inline]
-fn min_max_helper<T, F>(array: &PrimitiveArray<T>, cmp: F) -> Option<T>
+fn min_max_helper<T, F>(array: &PrimitiveArray<T>, cmp: F, is_min: bool) -> Option<T>
 where
-    T: NativeType,
+    T: NativeType + num::Bounded,
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     let null_count = array.null_count();
@@ -145,16 +222,7 @@ where
     let values = array.values();
 
     if let Some(validity) = array.validity() {
-        let mut n = T::default();
-        let mut has_value = false;
-        for (i, item) in values.iter().enumerate() {
-            let is_valid = unsafe { validity.get_bit_unchecked(i) };
-            if is_valid && (!has_value || cmp(&n, item) == std::cmp::Ordering::Greater) {
-                has_value = true;
-                n = *item
-            }
-        }
-        Some(n)
+        Some(null_min_max_primitive(values, validity, cmp, is_min))
     } else {
         Some(nonnull_min_max_primitive(values, cmp))
     }
@@ -239,23 +307,26 @@ mod tests {
     }
 
     // todo: convert me
-    /*
     #[test]
     fn test_primitive_min_max_float_large_nonnull_array() {
-        let a: Float64Array = (0..256).map(|i| Some((i + 1) as f64)).collect();
+        let a: Primitive<f64> = (0..256).map(|i| Some((i + 1) as f64)).collect();
+        let a = a.to(DataType::Float64);
         // min/max are on boundaries of chunked data
-        assert_eq!(Some(1.0), min(&a));
-        assert_eq!(Some(256.0), max(&a));
+        assert_eq!(Some(1.0), min_f64(&a));
+        assert_eq!(Some(256.0), max_f64(&a));
 
         // max is last value in remainder after chunking
-        let a: Float64Array = (0..255).map(|i| Some((i + 1) as f64)).collect();
-        assert_eq!(Some(255.0), max(&a));
+        let a: Primitive<f64> = (0..255).map(|i| Some((i + 1) as f64)).collect();
+        let a = a.to(DataType::Float64);
+        assert_eq!(Some(255.0), max_f64(&a));
 
         // max is first value in remainder after chunking
-        let a: Float64Array = (0..257).map(|i| Some((i + 1) as f64)).collect();
-        assert_eq!(Some(257.0), max(&a));
+        let a: Primitive<f64> = (0..257).map(|i| Some((i + 1) as f64)).collect();
+        let a = a.to(DataType::Float64);
+        assert_eq!(Some(257.0), max_f64(&a));
     }
 
+    /*
     #[test]
     fn test_primitive_min_max_float_large_nullable_array() {
         let a: Float64Array = (0..256)
