@@ -28,6 +28,8 @@ fn add_benchmark(c: &mut Criterion) {
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
 
     c.bench_function("sum nulls f32", |b| b.iter(|| bench_sum(&arr_a)));
+
+    c.bench_function("min nulls f32", |b| b.iter(|| bench_min(&arr_a)));
 }
 
 criterion_group!(benches, add_benchmark);
