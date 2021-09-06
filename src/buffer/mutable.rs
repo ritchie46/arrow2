@@ -233,7 +233,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// buffer.push(2);
     ///
     /// buffer.shrink_to_fit();
-    /// assert!(buffer.capacity() == 8);
+    /// assert!(buffer.capacity() == 2);
     /// ```
     pub fn shrink_to_fit(&mut self) {
         self.data.shrink_to_fit();
