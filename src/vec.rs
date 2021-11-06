@@ -159,7 +159,7 @@ impl<T: NativeType> AlignedVec<T> {
             if self.capacity == 0 && value == T::default() {
                 // edge case where the allocate
                 let required_cap = capacity_multiple_of_64::<T>(new_len);
-                let ptr = alloc::allocate_aligned_zeroed(required_cap);
+                let ptr = alloc::allocate_aligned(required_cap);
                 self.ptr = ptr;
                 self.capacity = required_cap;
                 self.len = new_len;
