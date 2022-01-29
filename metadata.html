@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Low-level API - arrow2 documentation</title>
+        <title>Metadata - arrow2 documentation</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html" class="active"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="io/avro_write.html"><strong aria-hidden="true">9.9.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="io/json_read.html"><strong aria-hidden="true">9.10.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="io/json_write.html"><strong aria-hidden="true">9.11.</strong> Write JSON</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html" class="active"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="io/avro_write.html"><strong aria-hidden="true">9.9.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="io/json_read.html"><strong aria-hidden="true">9.10.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="io/json_write.html"><strong aria-hidden="true">9.11.</strong> Write JSON</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -134,88 +134,71 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="low-level-api"><a class="header" href="#low-level-api">Low-level API</a></h1>
-<p>The starting point of this crate is the idea that data is stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem.</p>
-<p>The most important design aspect of this crate is that contiguous regions are shared via an
-<code>Arc</code>. In this context, the operation of slicing a memory region is <code>O(1)</code> because it
-corresponds to changing an offset and length. The tradeoff is that once under
-an <code>Arc</code>, memory regions are immutable.</p>
-<p>The second most important aspect is that Arrow has two main types of data buffers: bitmaps,
-whose offsets are measured in bits, and byte types (such as <code>i32</code>), whose offsets are
-measured in bytes. With this in mind, this crate has 2 main types of containers of
-contiguous memory regions:</p>
-<ul>
-<li><code>Buffer&lt;T&gt;</code>: handle contiguous memory regions of type T whose offsets are measured in items</li>
-<li><code>Bitmap</code>: handle contiguous memory regions of bits whose offsets are measured in bits</li>
-</ul>
-<p>These hold <em>all</em> data-related memory in this crate.</p>
-<p>Due to their intrinsic immutability, each container has a corresponding mutable
-(and non-shareable) variant:</p>
-<ul>
-<li><code>Vec&lt;T&gt;</code></li>
-<li><code>MutableBitmap</code></li>
-</ul>
-<p>Let's see how these structures are used.</p>
-<p>Create a new <code>Buffer&lt;u32&gt;</code>:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::Buffer;
-</span><span class="boring">fn main() {
-</span>let x = vec![1u32, 2, 3];
-let x: Buffer&lt;u32&gt; = x.into();
-assert_eq!(x.as_slice(), &amp;[1u32, 2, 3]);
+                        <h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
+<pre><pre class="playground"><code class="language-rust">use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
-let x = x.slice(1, 2); // O(1)
-assert_eq!(x.as_slice(), &amp;[2, 3]);
-<span class="boring">}
-</span></code></pre></pre>
-<p>Contrarily to <code>Vec</code>, <code>Buffer</code> (and all structs in this crate) only supports
-the following physical types:</p>
-<ul>
-<li><code>i8-i128</code></li>
-<li><code>u8-u64</code></li>
-<li><code>f32</code> and <code>f64</code></li>
-<li><code>arrow2::types::days_ms</code></li>
-<li><code>arrow2::types::months_days_ns</code></li>
-</ul>
-<p>This is because the arrow specification only supports the above Rust types; all other complex
-types supported by arrow are built on top of these types, which enables Arrow to be a highly
-interoperable in-memory format.</p>
-<h2 id="bitmaps"><a class="header" href="#bitmaps">Bitmaps</a></h2>
-<p>Arrow's in-memory arrangement of boolean values is different from <code>Vec&lt;bool&gt;</code>. Specifically,
-arrow uses individual bits to represent a boolean, as opposed to the usual byte that <code>bool</code> holds.
-Besides the 8x compression, this makes the validity particularly useful for 
-<a href="https://en.wikipedia.org/wiki/AVX-512">AVX512</a> masks.
-One tradeoff is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
-pointer arithmetics, whose smallest unit is a byte.</p>
-<p>Arrow2 has two containers for bitmaps: <code>Bitmap</code> (immutable and sharable)
-and <code>MutableBitmap</code> (mutable):</p>
-<pre><pre class="playground"><code class="language-rust">use arrow2::bitmap::Bitmap;
-<span class="boring">fn main() {
-</span>let x = Bitmap::from(&amp;[true, false]);
-let iter = x.iter().map(|x| !x);
-let y = Bitmap::from_trusted_len_iter(iter);
-assert_eq!(y.get_bit(0), false);
-assert_eq!(y.get_bit(1), true);
-<span class="boring">}
-</span></code></pre></pre>
-<pre><pre class="playground"><code class="language-rust">use arrow2::bitmap::MutableBitmap;
-<span class="boring">fn main() {
-</span>let mut x = MutableBitmap::new();
-x.push(true);
-x.push(false);
-assert_eq!(x.get(1), false);
-x.set(1, true);
-assert_eq!(x.get(1), true);
-<span class="boring">}
-</span></code></pre></pre>
+fn main() {
+    // two data types (logical types)
+    let type1_ = DataType::Date32;
+    let type2_ = DataType::Int32;
+
+    // two fields (columns)
+    let field1 = Field::new(&quot;c1&quot;, type1_, true);
+    let field2 = Field::new(&quot;c2&quot;, type2_, true);
+
+    // which can contain extra metadata:
+    let mut metadata = Metadata::new();
+    metadata.insert(
+        &quot;Office Space&quot;.to_string(),
+        &quot;Deals with real issues in the workplace.&quot;.to_string(),
+    );
+    let field1 = field1.with_metadata(metadata);
+
+    // a schema (a table)
+    let schema = Schema::from(vec![field1, field2]);
+
+    assert_eq!(schema.fields.len(), 2);
+
+    // which can also contain extra metadata:
+    let mut metadata = Metadata::new();
+    metadata.insert(
+        &quot;Office Space&quot;.to_string(),
+        &quot;Deals with real issues in the workplace.&quot;.to_string(),
+    );
+    let schema = schema.with_metadata(metadata);
+
+    assert_eq!(schema.fields.len(), 2);
+}
+</code></pre></pre>
+<h2 id="datatype-logical-types"><a class="header" href="#datatype-logical-types"><code>DataType</code> (Logical types)</a></h2>
+<p>The Arrow specification contains a set of logical types, an enumeration of the different
+semantical types defined in Arrow.</p>
+<p>In Arrow2, logical types are declared as variants of the <code>enum</code> <code>arrow2::datatypes::DataType</code>.
+For example, <code>DataType::Int32</code> represents a signed integer of 32 bits.</p>
+<p>Each <code>DataType</code> has an associated <code>enum PhysicalType</code> (many-to-one) representing the
+particular in-memory representation, and is associated to a specific semantics.
+For example, both <code>DataType::Date32</code> and <code>DataType::Int32</code> have the same <code>PhysicalType</code>
+(<code>PhysicalType::Primitive(PrimitiveType::Int32)</code>) but <code>Date32</code> represents the number of
+days since UNIX epoch.</p>
+<p>Logical types are metadata: they annotate physical types with extra information about data.</p>
+<h2 id="field-column-metadata"><a class="header" href="#field-column-metadata"><code>Field</code> (column metadata)</a></h2>
+<p>Besides logical types, the arrow format supports other relevant metadata to the format.
+An important one is <code>Field</code> broadly corresponding to a column in traditional columnar formats.
+A <code>Field</code> is composed by a name (<code>String</code>), a logical type (<code>DataType</code>), whether it is
+nullable (<code>bool</code>), and optional metadata.</p>
+<h2 id="schema-table-metadata"><a class="header" href="#schema-table-metadata"><code>Schema</code> (table metadata)</a></h2>
+<p>The most common use of <code>Field</code> is to declare a <code>arrow2::datatypes::Schema</code>, a sequence of <code>Field</code>s
+with optional metadata.</p>
+<p><code>Schema</code> is essentially metadata of a &quot;table&quot;: it has a sequence of named columns and their metadata (<code>Field</code>s) with optional metadata.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="arrow.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="compute.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="high_level.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="ffi.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -224,10 +207,10 @@ assert_eq!(x.get(1), true);
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="arrow.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="compute.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="high_level.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="ffi.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
