@@ -25,6 +25,10 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
+    let data_type = match data_type {
+        DataType::Dictionary(_, values, _) => *values,
+        _ => data_type,
+    };
     let dict = dict
         .as_any()
         .downcast_ref::<PrimitivePageDict<P>>()
@@ -144,10 +148,6 @@ where
         chunk_size: Option<usize>,
         op: F,
     ) -> Self {
-        let data_type = match data_type {
-            DataType::Dictionary(_, values, _) => *values,
-            _ => data_type,
-        };
         Self {
             iter,
             init,

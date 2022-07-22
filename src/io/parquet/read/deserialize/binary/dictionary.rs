@@ -7,6 +7,7 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
+    io::parquet::read::deserialize::nested_utils::{InitNested, NestedArrayIter, NestedState},
 };
 
 use super::super::dictionary::*;
@@ -103,4 +104,92 @@ where
             MaybeNext::More => self.next(),
         }
     }
+}
+
+#[derive(Debug)]
+pub struct NestedDictIter<K, O, I>
+where
+    I: DataPages,
+    O: Offset,
+    K: DictionaryKey,
+{
+    iter: I,
+    init: Vec<InitNested>,
+    data_type: DataType,
+    values: Dict,
+    items: VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
+    chunk_size: Option<usize>,
+    phantom: std::marker::PhantomData<O>,
+}
+
+impl<K, O, I> NestedDictIter<K, O, I>
+where
+    I: DataPages,
+    O: Offset,
+    K: DictionaryKey,
+{
+    pub fn new(
+        iter: I,
+        init: Vec<InitNested>,
+        data_type: DataType,
+        chunk_size: Option<usize>,
+    ) -> Self {
+        Self {
+            iter,
+            init,
+            data_type,
+            values: Dict::Empty,
+            items: VecDeque::new(),
+            chunk_size,
+            phantom: Default::default(),
+        }
+    }
+}
+
+impl<K, O, I> Iterator for NestedDictIter<K, O, I>
+where
+    I: DataPages,
+    O: Offset,
+    K: DictionaryKey,
+{
+    type Item = Result<(NestedState, DictionaryArray<K>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_state = nested_next_dict(
+            &mut self.iter,
+            &mut self.items,
+            &self.init,
+            &mut self.values,
+            self.data_type.clone(),
+            self.chunk_size,
+            |dict| read_dict::<O>(self.data_type.clone(), dict),
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok(dict)) => Some(Ok(dict)),
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
+        }
+    }
+}
+
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays_nested<'a, K, O, I>(
+    iter: I,
+    init: Vec<InitNested>,
+    data_type: DataType,
+    chunk_size: Option<usize>,
+) -> NestedArrayIter<'a>
+where
+    I: 'a + DataPages,
+    O: Offset,
+    K: DictionaryKey,
+{
+    Box::new(
+        NestedDictIter::<K, O, I>::new(iter, init, data_type, chunk_size).map(|result| {
+            let (mut nested, array) = result?;
+            let _ = nested.nested.pop().unwrap(); // the primitive
+            Ok((nested, array.boxed()))
+        }),
+    )
 }

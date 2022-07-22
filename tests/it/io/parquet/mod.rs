@@ -1441,9 +1441,9 @@ fn nested_dict() -> Result<()> {
         DataType::List(Box::new(Field::new(
             "item",
             floats.data_type().clone(),
-            true,
+            false,
         ))),
-        vec![0i32, 0, 2, 3, 3].into(),
+        vec![0i32, 0, 0, 2, 3].into(),
         floats.boxed(),
         Some([true, false, true, true].into()),
     )?;
