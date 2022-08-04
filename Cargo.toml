@@ -69,7 +69,7 @@ futures = { version = "0.3", optional = true }
 ahash = { version = "0.7" }
 
 # parquet support
-parquet2 = { version = "0.14.0", optional = true, default_features = false }
+parquet2 = { git="https://github.com/ritchie46/parquet2.git", branch="zlib_ng", version = "0.14.0", optional = true, default_features = false }
 
 # avro support
 avro-schema = { version = "0.2", optional = true }
@@ -162,7 +162,6 @@ io_parquet_compression = [
     "io_parquet_gzip",
     "io_parquet_snappy",
     "io_parquet_lz4",
-    "io_parquet_lz4_flex",
     "io_parquet_brotli"
 ]
 
@@ -173,8 +172,9 @@ io_parquet_gzip = ["parquet2/gzip"]
 io_parquet_lz4_flex = ["parquet2/lz4_flex"]
 io_parquet_lz4 = ["parquet2/lz4"]
 io_parquet_brotli = ["parquet2/brotli"]
+io_parquet_gzip_zlib_ng = ["parquet2/gzip_zlib_ng"]
 
-io_avro = ["avro-schema", "streaming-iterator"]
+io_avro = ["avro-schema", "streaming-iterator", "fallible-streaming-iterator", "serde_json"]
 
 io_avro_compression = [
     "libflate",
