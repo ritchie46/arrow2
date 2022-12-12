@@ -108,7 +108,9 @@ ahash = { version = "0.8", features=["runtime-rng"] }
 # parquet support
 [dependencies.parquet2]
 version = "0.17"
+git = "https://github.com/ritchie46/parquet2/"
 optional = true
+branch = "fix_rle_decoding"
 default_features = false
 features = ["async"]
 
