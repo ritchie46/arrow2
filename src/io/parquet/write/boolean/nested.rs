@@ -19,11 +19,6 @@ pub fn array_to_page(
     let is_optional = is_nullable(&type_.field_info);
 
     let mut nested = nested.to_vec();
-    if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
-        *c = len;
-    } else {
-        unreachable!("")
-    }
 
     let mut buffer = vec![];
     let (repetition_levels_byte_length, definition_levels_byte_length) =
