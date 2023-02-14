@@ -18,11 +18,12 @@ pub fn array_to_page(
 ) -> Result<DataPage> {
     let is_optional = is_nullable(&type_.field_info);
 
-<<<<<<< HEAD
     let mut nested = nested.to_vec();
-
-=======
->>>>>>> c12b6005 (Fixed nested boolean offset (#1404))
+    if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
+        *c = len;
+    } else {
+        unreachable!("")
+    }
     let mut buffer = vec![];
     let (repetition_levels_byte_length, definition_levels_byte_length) =
         nested::write_rep_and_def(options.version, nested, &mut buffer)?;
