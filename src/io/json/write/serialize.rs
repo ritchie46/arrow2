@@ -234,6 +234,16 @@ where
     ))
 }
 
+fn dictionary_serializer<'a>(
+    array: &'a DictionaryArray<u32>,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    Box::new(BufStreamingIterator::new(
+        array.values_iter_typed::<Utf8Array<i64>>().unwrap(),
+        |x: &str, buf: &mut Vec<u8>| write!(buf, "\"{}\"", x).unwrap(),
+        vec![],
+    ))
+}
+
 pub(crate) fn new_serializer<'a>(
     array: &'a dyn Array,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
@@ -271,6 +281,9 @@ pub(crate) fn new_serializer<'a>(
                 };
                 timestamp_serializer(array.as_any().downcast_ref().unwrap(), convert)
             }
+        }
+        DataType::Dictionary(_, _, _) => {
+            dictionary_serializer(array.as_any().downcast_ref().unwrap())
         }
         other => todo!("Writing {:?} to JSON", other),
     }
