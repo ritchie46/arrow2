@@ -238,8 +238,16 @@ fn dictionary_serializer<'a>(
     array: &'a DictionaryArray<u32>,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
     Box::new(BufStreamingIterator::new(
-        array.values_iter_typed::<Utf8Array<i64>>().unwrap(),
-        |x: &str, buf: &mut Vec<u8>| write!(buf, "\"{}\"", x).unwrap(),
+        array.iter_typed::<Utf8Array<i64>>().unwrap(),
+        {
+            |x: Option<&str>, buf: &mut Vec<u8>| {
+                if let Some(x) = x {
+                    write!(buf, "\"{}\"", x).unwrap()
+                } else {
+                    buf.extend_from_slice(b"\"null\"")
+                }
+            }
+        },
         vec![],
     ))
 }
