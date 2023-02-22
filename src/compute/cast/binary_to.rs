@@ -130,14 +130,29 @@ fn fixed_size_to_offsets<O: Offset>(values_len: usize, fixed_size: usize) -> Off
     unsafe { Offsets::new_unchecked(offsets) }
 }
 
-/// Conversion of `FixedSizeBinary` to `Binary`.
-pub fn fixed_size_binary_binary<O: Offset>(
+/// Conversion of large-binary
+pub fn fixed_size_binary_to_large_binary(
     from: &FixedSizeBinaryArray,
     to_data_type: DataType,
-) -> BinaryArray<O> {
+) -> BinaryArray<i64> {
     let values = from.values().clone();
-    let offsets = fixed_size_to_offsets(values.len(), from.size());
-    BinaryArray::<O>::new(
+    let offsets = fixed_size_to_offsets(values.len(), from.fixed_size());
+    BinaryArray::<i64>::new(
+        to_data_type,
+        offsets.into(),
+        values,
+        from.validity().cloned(),
+    )
+}
+
+/// Conversion of binary
+pub fn fixed_size_binary_to_binary(
+    from: &FixedSizeBinaryArray,
+    to_data_type: DataType,
+) -> BinaryArray<i32> {
+    let values = from.values().clone();
+    let offsets = fixed_size_to_offsets(values.len(), from.fixed_size());
+    BinaryArray::<i32>::new(
         to_data_type,
         offsets.into(),
         values,
