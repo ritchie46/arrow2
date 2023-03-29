@@ -109,7 +109,9 @@ getrandom = { version = "0.2", features = ["js"] }
 
 # parquet support
 [dependencies.parquet2]
+git = "https://github.com/jorgecarleitao/parquet2"
 version = "0.17"
+rev = "9eee7eb1130aed4cd0d841e59c325cc366fc3798"
 optional = true
 default_features = false
 features = ["async"]
