@@ -105,6 +105,24 @@ fn dictionary_utf8_serializer<'a, K: DictionaryKey, O: Offset>(
     materialize_serializer(f, iter, offset, take)
 }
 
+fn dictionary_utf8_serializer<'a, K: DictionaryKey, O: Offset>(
+    array: &'a DictionaryArray<K>,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    let iter = array.iter_typed::<Utf8Array<O>>().unwrap();
+
+    Box::new(BufStreamingIterator::new(
+        iter,
+        |x, buf| {
+            if let Some(x) = x {
+                utf8::write_str(buf, x).unwrap();
+            } else {
+                buf.extend_from_slice(b"null")
+            }
+        },
+        vec![],
+    ))
+}
+
 fn utf8_serializer<'a, O: Offset>(
     array: &'a Utf8Array<O>,
     offset: usize,
